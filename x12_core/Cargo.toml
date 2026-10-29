@@ -1,0 +1,22 @@
+[package]
+name = "x12-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+license = "MIT"
+description = "Pure-compute ANSI X12 / UN-EDIFACT EDI structural parser (ported verbatim from Query-farm vgi-x12, MIT); no I/O, no network, no VGI/Arrow"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+too_many_lines = "allow"

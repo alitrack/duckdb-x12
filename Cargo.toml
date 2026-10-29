@@ -1,0 +1,53 @@
+[package]
+name = "duckdb-x12"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+license = "MIT"
+description = "DuckDB loadable extension: ANSI X12 / UN-EDIFACT EDI sniffing — transaction type, delimiter sets, segment counts, element extraction, in SQL"
+
+[lib]
+name = "x12"
+crate-type = ["cdylib"]
+
+# Packaging tool (copied from quack-rs, std-only): stamps the 534-byte DuckDB
+# extension metadata footer onto the built cdylib to produce the loadable
+# .duckdb_extension. `cargo run --bin append_metadata`.
+[[bin]]
+name = "append_metadata"
+path = "src-bin/append_metadata/main.rs"
+
+[dependencies]
+# quack-rs — pure-Rust wrapper over DuckDB's C Extension API (crates.io).
+# 0.18.0 is the version this code was written and tested against; pinned
+# exactly so the reviewed ABI-wrapper version can never float under a caret
+# requirement.
+quack-rs = "=0.18.0"
+# C extension API headers/symbols; the cdylib resolves them against the host
+# DuckDB process at LOAD time.
+libduckdb-sys = { version = "1.10504", features = ["loadable-extension"] }
+
+# Engine (x12_core/, verbatim from the Query-farm vgi-x12 x12-core crate, MIT):
+# ANSI X12 / UN-EDIFACT structural parser (envelope, segments, delimiters),
+# no I/O, no network, no Arrow, no VGI. Kept as a separate path crate so its
+# internal `crate::` paths are unchanged (serde only).
+x12-core = { path = "x12_core" }
+
+[dev-dependencies]
+# SQL-level integration tests: InMemoryDb compiles a real bundled DuckDB so the
+# built .duckdb_extension can be LOADed inside `cargo test`. Pinned EXACTLY:
+# the 1.1050x line bundles a C++11-compatible DuckDB source tree that quack-rs
+# 0.18's bundled build (`-std=c++11`) compiles; the 1.20000.x line requires
+# C++17 and fails that build. `libduckdb-sys` must stay on the 1.1050x line.
+quack-rs = { version = "=0.18.0", features = ["bundled-test"] }
+duckdb = { version = "=1.10506.0", features = ["bundled"] }
+
+[profile.release]
+# `unwind`, not `abort`: every callback is wrapped in quack-rs's
+# panic-safe `*_callback!` macros (catch_unwind -> set_error), so a panic in
+# extension code becomes a DuckDB error instead of aborting the host process.
+panic = "unwind"
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true
